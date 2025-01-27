@@ -15,15 +15,13 @@ class StreamController extends Controller
         return Inertia::render('Stream/Index', [
             'profiles' => $streamService->getAllHandleIds(Auth::user()->id),
         ]);
-        /* return Inertia::render('Stream/Index', [ */
-        /*     'profiles' => $streamService->getAllProfiles(Auth::user()->id), */
-        /* ]); */
     }
 
 
     public function getProfile(Request $request, StreamService $streamService)
     {
         $profile = $streamService->getProfile(Auth::user()->id, $request->id);
+
         return response()->json($profile);
     }
 }

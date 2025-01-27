@@ -3,14 +3,13 @@
 namespace NickKlein\Streams\Services\Stream;
 
 use NickKlein\Streams\Interfaces\StreamServiceInterface;
-use NickKlein\Streams\Models\UserStreamHandle;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Log;
 use NickKlein\Streams\Repositories\StreamRepository;
 
 class YouTube implements StreamServiceInterface
 {
-    const THRESHOLD = 700000;
+    const THRESHOLD = 950000;
     const NAME = 'youtube';
 
     public function __construct(public StreamRepository $streamRepository)

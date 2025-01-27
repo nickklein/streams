@@ -19,7 +19,16 @@ export default function Index(props) {
                     });
 
                     return updatedProfiles.sort((a, b) => {
-                        return (b.isLive === true) - (a.isLive === true);
+                        if (!a.name || !b.name) {
+                            console.warn("Missing name in one or more profiles:", a, b);
+                        }
+                        const nameA = a.name || "";
+                        const nameB = b.name || "";
+                        if (b.isLive !== a.isLive) {
+                            return (b.isLive === true) - (a.isLive === true);
+                        }
+
+                        return nameA.localeCompare(nameB);
                     });
                 });
 
