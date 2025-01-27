@@ -1,35 +1,54 @@
 <?php
 
-namespace NickKlein\Stream\Services\Stream;
+namespace NickKlein\Streams\Services\Stream;
 
-use NickKlein\Stream\Interfaces\StreamServiceInterface;
 use App\Models\AccessToken;
-use NickKlein\Stream\Models\UserStreamHandles;
+use NickKlein\Streams\Interfaces\StreamServiceInterface;
 use Carbon\Carbon;
+use NickKlein\Streams\Repositories\StreamRepository;
 
 class Twitch implements StreamServiceInterface
 {
     const NAME = 'twitch';
 
-    public function getProfiles(int $userId)
+    public function __construct(public StreamRepository $streamRepository)
     {
-        $token  = $this->getAccessToken();
-        $streamHandles = UserStreamHandles::where('user_id', $userId)
-            ->streamHandleFilterPlatform('twitch')
-            ->get();
+        //
+    }
 
-        $response = [];
+    public function getProfileIds(int $userId): array
+    {
+        $streamHandles = $this->streamRepository->getUsersStreamHandles($userId, self::NAME);
 
         foreach ($streamHandles as $stream) {
             $response[] = [
                 'id' => $stream->id,
-                'name' => $stream->streamHandle->name,
-                'url' => $stream->streamHandle->channel_url,
-                'isLive' => $this->isAccountLive($stream->streamHandle->channel_id, $token)
             ];
         }
 
         return $response;
+    }
+
+    public function getProfileById(int $userId, int $userStreamId): array
+    {
+        $streamHandles = $this->streamRepository->getUsersStreamHandles($userId, self::NAME);
+
+        foreach ($streamHandles as $stream) {
+            if ($stream->id === $userStreamId) {
+                $streamHandles = $stream->streamer->streamHandles;
+                $token = $this->getAccessToken();
+                foreach($streamHandles as $handle) {
+                    return [
+                        'id' => $stream->id,
+                        'name' => $stream->streamer->name,
+                        'url' => $handle->channel_url,
+                        'isLive' => $this->isAccountLive($handle->channel_id, $token)
+                    ];
+                } 
+            }
+        }
+
+        return [];
     }
 
     private function getAccessToken()

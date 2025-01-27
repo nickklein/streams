@@ -1,8 +1,9 @@
 <?php
 
-namespace NickKlein\Stream\Interfaces;
+namespace NickKlein\Streams\Interfaces;
 
 interface StreamServiceInterface
 {
-    public function getProfiles(int $userId);
+    public function getProfileIds(int $userId): array;
+    public function getProfileById(int $userId, int $userStreamId): array;
 }

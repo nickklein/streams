@@ -1,9 +1,9 @@
 <?php
 
-namespace NickKlein\Stream;
+namespace NickKlein\Streams;
 
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Contracts\Routing\Registrar as Router;
+use NickKlein\Streams\Commands\RunSeederCommand;
 
 class StreamServiceProvider extends ServiceProvider
 {
@@ -24,8 +24,12 @@ class StreamServiceProvider extends ServiceProvider
         //
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__ . '/../resources/assets/' => resource_path('js/Pages/Packages/Stream'),
+                __DIR__ . '/../resources/js/' => resource_path('js/Pages/Stream'),
             ], 'assets');
         }
+
+        $this->commands([
+            RunSeederCommand::class,
+        ]);
     }
 }

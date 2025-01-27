@@ -1,20 +1,22 @@
 <?php
 
-namespace NickKlein\Stream\Services;
+namespace NickKlein\Streams\Services;
 
-use NickKlein\Stream\Services\Stream\Twitch;
-use NickKlein\Stream\Services\Stream\YouTube;
+use NickKlein\Streams\Repositories\StreamRepository;
+use NickKlein\Streams\Services\Stream\Twitch;
+use NickKlein\Streams\Services\Stream\YouTube;
 
 class StreamService
 {
     private $streams;
 
-    public function __construct(Twitch $twitch, YouTube $youTube)
+    public function __construct(Twitch $twitch, YouTube $youTube, public StreamRepository $streamRepository)
     {
         $this->streams = [$twitch, $youTube];
     }
 
-    public function getHandles(int $userId)
+    // @DEPRECATED Moving to ajax call loading
+    public function getAllProfiles(int $userId)
     {
         // Create laravel collection
         $collection = collect([]);
@@ -27,5 +29,26 @@ class StreamService
             // Then sort by 'name' ascending
             return [!$profile['isLive'], $profile['name']];
         })->values()->toArray();
+    }
+
+    public function getAllHandleIds(int $userId): array
+    {
+        $collection = collect([]);
+        foreach ($this->streams as $stream) {
+            $collection = $collection->merge(collect($stream->getProfileIds($userId)));
+        }
+
+        return $collection->toArray();
+    }
+
+    public function getProfile(int $userId, int $userStreamId)
+    {
+        foreach ($this->streams as $stream) {
+            if ($profile = $stream->getProfileById($userId, $userStreamId)) {
+                return $profile;
+            }
+        }
+
+        return [];
     }
 }

@@ -1,35 +1,58 @@
 <?php
 
-namespace NickKlein\Stream\Services\Stream;
+namespace NickKlein\Streams\Services\Stream;
 
-use NickKlein\Stream\Interfaces\StreamServiceInterface;
-use NickKlein\Stream\Models\UserStreamHandles;
+use NickKlein\Streams\Interfaces\StreamServiceInterface;
+use NickKlein\Streams\Models\UserStreamHandle;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Log;
+use NickKlein\Streams\Repositories\StreamRepository;
 
 class YouTube implements StreamServiceInterface
 {
-
     const THRESHOLD = 700000;
+    const NAME = 'youtube';
 
-    public function getProfiles(int $userId)
+    public function __construct(public StreamRepository $streamRepository)
     {
-        $streamHandles = UserStreamHandles::where('user_id', $userId)
-            ->streamHandleFilterPlatform('youtube')
-            ->get();
+        //
+    }
 
-        $response = [];
+    public function getProfileIds(int $userId): array
+    {
+        $streamHandles = $this->streamRepository->getUsersStreamHandles($userId, self::NAME);
+
         foreach ($streamHandles as $stream) {
             $response[] = [
                 'id' => $stream->id,
-                'name' => $stream->streamHandle->name,
-                'url' => $stream->streamHandle->channel_url,
-                'isLive' => $this->isAccountLive($stream->streamHandle->channel_id)
             ];
         }
 
         return $response;
     }
+
+
+    public function getProfileById(int $userId, int $userStreamId): array
+    {
+        $streamHandles = $this->streamRepository->getUsersStreamHandles($userId, self::NAME);
+
+        foreach ($streamHandles as $stream) {
+            if ($stream->id === $userStreamId) {
+                $streamHandles = $stream->streamer->streamHandles;
+                foreach($streamHandles as $handle) {
+                    return [
+                        'id' => $stream->id,
+                        'name' => $stream->streamer->name,
+                        'url' => $handle->channel_url,
+                        'isLive' => $this->isAccountLive($handle->channel_id)
+                    ];
+                } 
+            }
+        }
+
+        return [];
+    }
+
 
     private function isAccountLive(string $channel): bool
     {

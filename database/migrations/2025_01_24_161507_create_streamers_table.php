@@ -11,11 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('stream_handles', function (Blueprint $table) {
+        Schema::create('streamers', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('platform');
-            $table->mediumInteger('streamer_id');
         });
     }
 
@@ -24,6 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('stream_handles');
+        Schema::dropIfExists('streamers');
     }
 };

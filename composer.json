@@ -1,9 +1,9 @@
 {
-    "name": "nickklein/stream",
+    "name": "nickklein/streams",
     "description": "stream package to speed up life",
     "autoload": {
         "psr-4": {
-            "NickKlein\\Dropbox\\": "src/"
+            "NickKlein\\Streams\\": "src/"
         }
     },
     "authors": [
@@ -14,7 +14,7 @@
     ],
     "require": {
         "php": "^8.1",
-        "illuminate/support": "^6.0"
+        "illuminate/support": "^8.0|^9.0|^10.0"
     },
     "require-dev": {
         "orchestra/testbench": "^4.0",
@@ -23,8 +23,8 @@
     "extra": {
         "laravel": {
             "providers": [
-                "NickKlein\\Stream\\StreamServiceProvider"
-            ],
+                "NickKlein\\Streams\\StreamServiceProvider"
+            ]
         }
     }
 }
