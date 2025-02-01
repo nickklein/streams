@@ -3,13 +3,12 @@
 namespace NickKlein\Streams\Services\Stream;
 
 use NickKlein\Streams\Interfaces\StreamServiceInterface;
-use GuzzleHttp\Client;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use NickKlein\Streams\Repositories\StreamRepository;
 
 class YouTube implements StreamServiceInterface
 {
-    const THRESHOLD = 950000;
     const NAME = 'youtube';
 
     public function __construct(public StreamRepository $streamRepository)
@@ -52,30 +51,35 @@ class YouTube implements StreamServiceInterface
         return [];
     }
 
-
-    private function isAccountLive(string $channel): bool
+    public function isAccountLive(string $channel): bool
     {
-        $url = "https://www.youtube.com/channel/{$channel}/live";
-        $client = new Client();
+        $retryCount = 3;
+        $apiKey = config('services.google.youtube_key');
+        $url = "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId={$channel}&type=video&eventType=live&key={$apiKey}";
 
         try {
-            $response = $client->head($url, [
-                'headers' => [
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
-                ]
-            ]);
+            // Retry needed because search youtube api isn't consistent
+            return retry($retryCount, function () use ($url) {
+                $response = Http::get($url);
 
-            $contentLength = $response->getHeader('Content-Length');
+                if ($response->failed()) {
+                    Log::error("YouTube API request failed: " . $response->body());
+                    throw new \Exception("YouTube API request failed"); // Forces retry
+                }
 
-            if ($contentLength && $contentLength[0] > self::THRESHOLD) {
+                $data = $response->json();
+
+                if (empty($data['items'])) {
+                    Log::warning("YouTube API returned empty response. Retrying...");
+                    throw new \Exception("No live videos found. Retrying..."); // Forces retry
+                }
+
                 return true;
-            } else {
-                return false;
-            }
-        } catch (\Exception $e) {
-            // Handle any errors here
-            Log::error($e->getMessage());
+            }, 2000); 
+        } catch(\Exception $e) {
             return false;
         }
+
+        return false;
     }
 }
