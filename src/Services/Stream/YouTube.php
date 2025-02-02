@@ -3,12 +3,13 @@
 namespace NickKlein\Streams\Services\Stream;
 
 use NickKlein\Streams\Interfaces\StreamServiceInterface;
-use Illuminate\Support\Facades\Http;
+use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Log;
 use NickKlein\Streams\Repositories\StreamRepository;
 
 class YouTube implements StreamServiceInterface
 {
+    const THRESHOLD = 950000;
     const NAME = 'youtube';
 
     public function __construct(public StreamRepository $streamRepository)
@@ -51,35 +52,35 @@ class YouTube implements StreamServiceInterface
         return [];
     }
 
-    public function isAccountLive(string $channel): bool
+
+    /**
+     * Fetch status of a youtube channel via HEAD
+     *
+     * NOTE: Note: I initially attempted this using the YouTube API, but retrieving live videos is currently not reliable. I tried using the Search API, but it doesn’t consistently return live streams and consumes a lot of API tokens hitting the limit within a few refreshes
+     **/
+    private function isAccountLive(string $channel): bool
     {
-        $retryCount = 3;
-        $apiKey = config('services.google.youtube_key');
-        $url = "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId={$channel}&type=video&eventType=live&key={$apiKey}";
+        $url = "https://www.youtube.com/channel/{$channel}/live";
+        $client = new Client();
 
         try {
-            // Retry needed because search youtube api isn't consistent
-            return retry($retryCount, function () use ($url) {
-                $response = Http::get($url);
+            $response = $client->head($url, [
+                'headers' => [
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+                ]
+            ]);
 
-                if ($response->failed()) {
-                    Log::error("YouTube API request failed: " . $response->body());
-                    throw new \Exception("YouTube API request failed"); // Forces retry
-                }
+            $contentLength = $response->getHeader('Content-Length');
 
-                $data = $response->json();
-
-                if (empty($data['items'])) {
-                    Log::warning("YouTube API returned empty response. Retrying...");
-                    throw new \Exception("No live videos found. Retrying..."); // Forces retry
-                }
-
+            if ($contentLength && $contentLength[0] > self::THRESHOLD) {
                 return true;
-            }, 2000); 
-        } catch(\Exception $e) {
+            } else {
+                return false;
+            }
+        } catch (\Exception $e) {
+            // Handle any errors here
+            Log::error($e->getMessage());
             return false;
         }
-
-        return false;
     }
 }
