@@ -18,6 +18,7 @@ class YouTube implements StreamServiceInterface
 
     public function getProfileIds(int $userId): array
     {
+        $response = [];
         $streamHandles = $this->streamRepository->getUsersStreamHandles($userId, self::NAME);
 
         foreach ($streamHandles as $stream) {
