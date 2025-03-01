@@ -8,6 +8,10 @@ class Streamer extends Model
 {
     public $timestamps = false;
 
+    public $fillable = [
+        'name',
+    ];
+
     public function streamHandles()
     {
         return $this->hasMany(StreamHandle::class, 'streamer_id', 'id');

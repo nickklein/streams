@@ -2,6 +2,10 @@
 
 namespace NickKlein\Streams\Services;
 
+use Illuminate\Support\Facades\DB;
+use NickKlein\Streams\Models\Streamer;
+use NickKlein\Streams\Models\StreamHandle;
+use NickKlein\Streams\Models\UserStreamHandle;
 use NickKlein\Streams\Repositories\StreamRepository;
 use NickKlein\Streams\Services\Stream\Twitch;
 use NickKlein\Streams\Services\Stream\YouTube;
@@ -34,5 +38,54 @@ class StreamService
         }
 
         return [];
+    }
+
+    public function storeStreamer(int $userId, string $platform, string $name, string $channelId, string $channelUrl): bool
+    {
+        try {
+            // First check if this streamer is already associated with the user
+            $existingStreamer = Streamer::where('name', $name)->first();
+            
+            if ($existingStreamer) {
+                $existingUserStreamHandle = UserStreamHandle::where([
+                    'user_id' => $userId,
+                    'streamer_id' => $existingStreamer->id,
+                ])->first();
+                
+                if ($existingUserStreamHandle) {
+                    // The user already has this streamer associated
+                    return false;
+                }
+            }
+            
+            DB::beginTransaction();
+            
+            // Find or create streamer
+            $streamer = Streamer::firstOrCreate([
+                'name' => $name,
+            ]);
+            
+            // Find or create stream handle
+            $streamHandle = StreamHandle::firstOrCreate([
+                'platform' => $platform,
+                'channel_id' => $channelId,
+                'streamer_id' => $streamer->id,
+            ], [
+                'channel_url' => $channelUrl,
+            ]);
+            
+            // Create user-streamer relationship
+            $userStreamHandle = UserStreamHandle::create([
+                'user_id' => $userId,
+                'streamer_id' => $streamer->id,
+                'preferred_platform' => $platform,
+            ]);
+            
+            DB::commit();
+            return true;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return false;
+        }
     }
 }

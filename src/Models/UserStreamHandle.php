@@ -8,6 +8,12 @@ class UserStreamHandle extends Model
 {
     public $timestamps = false;
 
+    public $fillable = [
+        'user_id',
+        'streamer_id',
+        'platform',
+    ];
+
     public function streamer()
     {
         return $this->belongsTo(Streamer::class, 'streamer_id', 'id');
