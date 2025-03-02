@@ -10,6 +10,7 @@ use NickKlein\Streams\Repositories\StreamRepository;
 class Twitch implements StreamServiceInterface
 {
     const NAME = 'twitch';
+    const CACHE_MINUTES = 15;
 
     public function __construct(public StreamRepository $streamRepository)
     {
@@ -32,24 +33,52 @@ class Twitch implements StreamServiceInterface
 
     public function getProfileById(int $userId, int $userStreamId): array
     {
+        // Get all stream handles for the user
         $streamHandles = $this->streamRepository->getUsersStreamHandles($userId, self::NAME);
-
+        
+        // Find the specific stream we need
+        // A streamer can have a youtube and a twitch account and stream both at the same time. Eventually there will be preferences on what should display but that's fun for a different day.
+        $targetStream = null;
         foreach ($streamHandles as $stream) {
             if ($stream->id === $userStreamId) {
-                $streamHandles = $stream->streamer->streamHandles;
-                $token = $this->getAccessToken();
-                foreach($streamHandles as $handle) {
-                    return [
-                        'id' => $stream->id,
-                        'name' => $stream->streamer->name,
-                        'url' => $handle->channel_url,
-                        'isLive' => $this->isAccountLive($handle->channel_id, $token)
-                    ];
-                } 
+                $targetStream = $stream;
+                break;
             }
         }
+        
+        // Return empty if no matching stream found
+        if (!$targetStream) {
+            return [];
+        }
+        
+        // Get the first handle from the streamer
+        $handle = $targetStream->streamer->streamHandles->first();
+        if (!$handle) {
+            return [];
+        }
+        
+        // Determine if we need fresh live status
+        $isCacheExpired = $this->streamRepository->isLastSyncExpired($userId, $userStreamId, self::CACHE_MINUTES);
+        
+        $isLive = $targetStream->is_live;
+        if ($isCacheExpired) {
+            // get the access token and the live status
+            $token = $this->getAccessToken();
+            $isLive = $this->isAccountLive($handle->channel_id, $token);
 
-        return [];
+            // Update user stream handle row
+            $targetStream->is_live = $isLive;
+            $targetStream->last_synced_at = now();
+            $targetStream->save();
+        }
+        
+        // Return the profile data
+        return [
+            'id' => $targetStream->id,
+            'name' => $targetStream->streamer->name,
+            'url' => $handle->channel_url,
+            'isLive' => $isLive,
+        ];
     }
 
     private function getAccessToken()

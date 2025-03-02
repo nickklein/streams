@@ -79,6 +79,8 @@ class StreamService
                 'user_id' => $userId,
                 'streamer_id' => $streamer->id,
                 'preferred_platform' => $platform,
+                'is_live' => 0,
+                'queued' => 0,
             ]);
             
             DB::commit();

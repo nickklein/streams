@@ -11,7 +11,10 @@ class UserStreamHandle extends Model
     public $fillable = [
         'user_id',
         'streamer_id',
-        'platform',
+        'preferred_platform',
+        'last_synced_at',
+        'is_live',
+        'queued',
     ];
 
     public function streamer()

@@ -2,11 +2,12 @@
 
 namespace NickKlein\Streams\Repositories;
 
+use Illuminate\Database\Eloquent\Collection;
 use NickKlein\Streams\Models\UserStreamHandle;
 
 class StreamRepository
 {
-    public function getUsersStreamHandles(int $userId, string $platform)
+    public function getUsersStreamHandles(int $userId, string $platform): Collection
     {
         return UserStreamHandle::where('user_id', $userId)
             ->with(['streamer.streamHandles' => function ($query) use ($platform) {
@@ -19,11 +20,23 @@ class StreamRepository
     }
 
 
-    public function getUsersStreamHandle(int $userId, string $userStreamId)
+    public function getUsersStreamHandle(int $userId, string $userStreamId): Collection
     {
         return UserStreamHandle::where('user_id', $userId)
             ->where('id', $userStreamId)
             ->with(['streamer.streamHandles'])
             ->get();
+    }
+
+    public function isLastSyncExpired(int $userId, int $userStreamId, int $minutes)
+    {
+        return UserStreamHandle::where('user_id', $userId)
+            ->where('id', $userStreamId)
+            ->where(function($query) use ($minutes) {
+                $datetime = now()->subMinutes($minutes);
+                $query->whereNull('last_synced_at')
+                    ->orWhere('last_synced_at', '<', $datetime);
+            })
+            ->exists();
     }
 }
