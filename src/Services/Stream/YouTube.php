@@ -63,11 +63,12 @@ class YouTube implements StreamServiceInterface
 
         $isLive = $targetStream->is_live;
         // Create a new cache if the cache is expired and queued is 0
-        if ($isCacheExpired && !$targetStream->queued) {
+        if ($isCacheExpired) {
         /*if (true) {*/
             $isLive = $this->isAccountLive($handle->channel_id); // NOTE: Inaccurate way to check live status
             $targetStream->is_live = $isLive;
-            $targetStream->queued = 1;
+            $targetStream->last_synced_at = now();
+            /*$targetStream->queued = 1;*/
             $targetStream->save();
 
             // TODO: Scraper

@@ -25,7 +25,7 @@ export default function Index(props) {
                         const nameA = a.name || "";
                         const nameB = b.name || "";
                         if (b.isLive !== a.isLive) {
-                            return (b.isLive === true) - (a.isLive === true);
+                            return (b.isLive === 1) - (a.isLive === 1);
                         }
 
                         return nameA.localeCompare(nameB);
