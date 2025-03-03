@@ -62,7 +62,14 @@ class YouTube implements StreamServiceInterface
         $isLive = $targetStream->is_live;
         // Create a new cache if the cache is expired and queued is 0
         if ($isCacheExpired) {
-            $isLive = $this->isChannelLive($handle->channel_id); // NOTE: Inaccurate way to check live status
+            $isLive = false;
+            for($i = 0; $i < 5; $i++) {
+                $isLive = $this->isChannelLive($handle->channel_id); // NOTE: Inaccurate way to check live status
+                if ($isLive) {
+                    break;
+                }
+                sleep(1);
+            }
             $targetStream->is_live = $isLive;
             $targetStream->last_synced_at = now();
             $targetStream->save();
@@ -76,7 +83,8 @@ class YouTube implements StreamServiceInterface
         ];
     }
 
-    private function isChannelLive($channelId) {
+    private function isChannelLive($channelId): bool
+    {
         $client = new Client([
             'timeout' => 30,
             'http_errors' => false,
