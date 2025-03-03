@@ -2,15 +2,13 @@
 
 namespace NickKlein\Streams\Services\Stream;
 
+use Exception;
 use NickKlein\Streams\Interfaces\StreamServiceInterface;
 use GuzzleHttp\Client;
-use Illuminate\Support\Facades\Log;
-use NickKlein\Streams\Jobs\ProcessDuskJob;
 use NickKlein\Streams\Repositories\StreamRepository;
 
 class YouTube implements StreamServiceInterface
 {
-    const THRESHOLD = 855941;
     const CACHE_MINUTES = 30;
     const NAME = 'youtube';
 
@@ -64,15 +62,10 @@ class YouTube implements StreamServiceInterface
         $isLive = $targetStream->is_live;
         // Create a new cache if the cache is expired and queued is 0
         if ($isCacheExpired) {
-        /*if (true) {*/
-            $isLive = $this->isAccountLive($handle->channel_id); // NOTE: Inaccurate way to check live status
+            $isLive = $this->isChannelLive($handle->channel_id); // NOTE: Inaccurate way to check live status
             $targetStream->is_live = $isLive;
             $targetStream->last_synced_at = now();
-            /*$targetStream->queued = 1;*/
             $targetStream->save();
-
-            // TODO: Scraper
-            /*ProcessDuskJob::dispatch($targetStream->id);*/
         }
 
         return [
@@ -83,36 +76,26 @@ class YouTube implements StreamServiceInterface
         ];
     }
 
-
-    /**
-     * Fetch status of a youtube channel via HEAD
-     *
-     * NOTE: Note: I initially attempted this using the YouTube API, but retrieving live videos is currently not reliable. 
-     * I tried using the Search API, but it doesn’t consistently return live streams and consumes a lot of API tokens hitting 
-     * the limit within a few refreshes.
-     **/
-    private function isAccountLive(string $channel): bool
-    {
-        $url = "https://www.youtube.com/channel/{$channel}/live";
-        $client = new Client();
-
+    private function isChannelLive($channelId) {
+        $client = new Client([
+            'timeout' => 30,
+            'http_errors' => false,
+            'headers' => [
+                'Accept-Encoding' => 'identity'
+            ]
+        ]);
+        
         try {
-            $response = $client->head($url, [
-                'headers' => [
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
-                ]
-            ]);
-
-            $contentLength = $response->getHeader('Content-Length');
-
-            if ($contentLength && $contentLength[0] > self::THRESHOLD) {
+            $channelUrl = "https://www.youtube.com/channel/{$channelId}/live";
+            $response = $client->get($channelUrl);
+            $html = $response->getBody()->getContents();
+            
+            if (strpos($html, '{"accessibilityData":{"label":"LIVE"}}},"style":"LIVE","icon":{"iconType":"LIVE"}') !== false) {
                 return true;
             }
             
             return false;
-        } catch (\Exception $e) {
-            // Handle any errors here
-            Log::error($e->getMessage());
+        } catch (Exception $e) {
             return false;
         }
     }
