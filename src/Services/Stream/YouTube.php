@@ -25,6 +25,8 @@ class YouTube implements StreamServiceInterface
         foreach ($streamHandles as $stream) {
             $response[] = [
                 'id' => $stream->id,
+                'name' => $stream->streamer->name,
+                'is_live' => $stream->is_live,
             ];
         }
 
@@ -61,7 +63,9 @@ class YouTube implements StreamServiceInterface
 
         $isLive = $targetStream->is_live;
         // Create a new cache if the cache is expired and queued is 0
+        // 
         if ($isCacheExpired) {
+            // TODO: Code could be improved.
             $liveLoopCount = 0;
             $isLive = false;
             for($i = 0; $i < 5; $i++) {

@@ -2,6 +2,7 @@
 
 namespace NickKlein\Streams\Services;
 
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use NickKlein\Streams\Models\Streamer;
 use NickKlein\Streams\Models\StreamHandle;
@@ -25,8 +26,9 @@ class StreamService
         foreach ($this->streams as $stream) {
             $collection = $collection->merge(collect($stream->getProfileIds($userId)));
         }
+        $sortedCollection = $this->sortCollectionByLiveAndName($collection);
 
-        return $collection->toArray();
+        return $sortedCollection->toArray();
     }
 
     public function getProfile(int $userId, int $userStreamId)
@@ -89,5 +91,13 @@ class StreamService
             DB::rollBack();
             return false;
         }
+    }
+
+    private function sortCollectionByLiveAndName(Collection $collection): Collection
+    {
+        return $collection->sortBy([
+            ['is_live', 'desc'],
+            ['name', 'asc'],
+        ])->values();
     }
 }
