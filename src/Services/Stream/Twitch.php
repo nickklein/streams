@@ -25,6 +25,8 @@ class Twitch implements StreamServiceInterface
         foreach ($streamHandles as $stream) {
             $response[] = [
                 'id' => $stream->id,
+                'name' => $stream->streamer->name,
+                'is_live' => $stream->is_live,
             ];
         }
 
