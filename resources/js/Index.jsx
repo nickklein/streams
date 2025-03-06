@@ -1,7 +1,7 @@
 import Pagination from '@/Components/Pagination';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, usePage } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 export default function Index(props) {
     const [profiles, setProfiles] = useState(props.profiles);
@@ -11,30 +11,33 @@ export default function Index(props) {
             axios.get(route('streams.get-profile', profile.id))
             .then(function(response) {
                 setProfiles(prevProfiles => {
-                    const updatedProfiles = prevProfiles.map(item => {
+                    return prevProfiles.map(item => {
                         if (item.id === profile.id) {
                             return { ...item, ...response.data };
                         }
                         return item;
-                    });
-
-                    return updatedProfiles.sort((a, b) => {
-                        if (!a.name || !b.name) {
-                            console.warn("Missing name in one or more profiles:", a, b);
-                        }
-                        const nameA = a.name || "";
-                        const nameB = b.name || "";
-                        if (b.isLive !== a.isLive) {
-                            return (b.isLive === 1) - (a.isLive === 1);
-                        }
-
-                        return nameA.localeCompare(nameB);
                     });
                 });
 
             });
         });
     }
+
+    const sortedProfiles = useMemo(() => {
+        return [...profiles].sort((a, b) => {
+            if (!a.name || !b.name) {
+                console.warn("Missing name in one or more profiles:", a, b);
+            }
+            const nameA = a.name || "";
+            const nameB = b.name || "";
+            if (b.isLive !== a.isLive) {
+                return b.isLive - a.isLive;
+            }
+
+            return nameA.localeCompare(nameB);
+        });
+    }, [profiles]);
+
 
     useEffect(() => {
         getProfiles();
@@ -49,7 +52,7 @@ export default function Index(props) {
             <Head title="Currently Streaming" />
             <div className={"max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8"}>
 
-            {profiles && profiles.map((item, index) => {
+            {sortedProfiles && sortedProfiles.map((item, index) => {
                 return (
                 <div className="bg-gray-800 shadow-lg text-white rounded-lg mt-4">
                     <div className="p-5 leading-none">
