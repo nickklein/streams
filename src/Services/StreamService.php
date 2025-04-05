@@ -20,11 +20,11 @@ class StreamService
         $this->streams = [$twitch, $youTube];
     }
 
-    public function getAllHandleIds(int $userId): array
+    public function getAllHandleIds(int $userId, int $favourites = 0): array
     {
         $collection = collect([]);
         foreach ($this->streams as $stream) {
-            $collection = $collection->merge(collect($stream->getProfileIds($userId)));
+            $collection = $collection->merge(collect($stream->getLimitedProfile($userId, $favourites)));
         }
         $sortedCollection = $this->sortCollectionByLiveAndName($collection);
 

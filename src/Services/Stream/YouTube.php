@@ -17,10 +17,10 @@ class YouTube implements StreamServiceInterface
         //
     }
 
-    public function getProfileIds(int $userId): array
+    public function getLimitedProfile(int $userId, int $favourites = 0): array
     {
         $response = [];
-        $streamHandles = $this->streamRepository->getUsersStreamHandles($userId, self::NAME);
+        $streamHandles = $this->streamRepository->getUsersStreamHandles($userId, self::NAME, $favourites);
 
         foreach ($streamHandles as $stream) {
             $response[] = [

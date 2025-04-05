@@ -7,7 +7,7 @@ use NickKlein\Streams\Models\UserStreamHandle;
 
 class StreamRepository
 {
-    public function getUsersStreamHandles(int $userId, string $platform): Collection
+    public function getUsersStreamHandles(int $userId, string $platform, int $favourites = 0): Collection
     {
         return UserStreamHandle::where('user_id', $userId)
             ->with(['streamer.streamHandles' => function ($query) use ($platform) {
@@ -15,6 +15,9 @@ class StreamRepository
             }])
             ->whereHas('streamer.streamHandles', function ($query) use ($platform) {
                 $query->where('platform', $platform);
+            })
+            ->when($favourites, function($query) use ($favourites) {
+                    return $query->where('favourite', $favourites);
             })
             ->get();
     }
