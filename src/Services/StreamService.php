@@ -42,6 +42,19 @@ class StreamService
         return [];
     }
 
+    /**
+     * Filter out live statuses using the profile array
+     **/
+    public function filterIsLiveStatus(array $profiles): Collection
+    {
+        $collection = collect($profiles);
+        $filtered = $collection->filter(function ($item) {
+            return $item['isLive'] === 1;
+        });
+
+        return $filtered;
+    }
+
     public function storeStreamer(int $userId, string $platform, string $name, string $channelId, string $channelUrl): bool
     {
         try {
