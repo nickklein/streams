@@ -16,11 +16,12 @@ class Twitch implements StreamServiceInterface
     {
         //
     }
+    
 
-    public function getProfileIds(int $userId): array
+    public function getLimitedProfile(int $userId, int $favourites): array
     {
         $response = [];
-        $streamHandles = $this->streamRepository->getUsersStreamHandles($userId, self::NAME);
+        $streamHandles = $this->streamRepository->getUsersStreamHandles($userId, self::NAME, $favourites);
 
         foreach ($streamHandles as $stream) {
             $response[] = [
