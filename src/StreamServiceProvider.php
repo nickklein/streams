@@ -3,6 +3,7 @@
 namespace NickKlein\Streams;
 
 use Illuminate\Support\ServiceProvider;
+use NickKlein\Streams\Commands\NotifyFavouritesCommand;
 use NickKlein\Streams\Commands\RunSeederCommand;
 
 class StreamServiceProvider extends ServiceProvider
@@ -30,6 +31,7 @@ class StreamServiceProvider extends ServiceProvider
 
         $this->commands([
             RunSeederCommand::class,
+            NotifyFavouritesCommand::class,
         ]);
     }
 }

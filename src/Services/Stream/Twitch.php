@@ -18,7 +18,7 @@ class Twitch implements StreamServiceInterface
     }
     
 
-    public function getLimitedProfile(int $userId, int $favourites): array
+    public function getLimitedProfile(int $userId, int $favourites = 0): array
     {
         $response = [];
         $streamHandles = $this->streamRepository->getUsersStreamHandles($userId, self::NAME, $favourites);

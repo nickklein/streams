@@ -49,7 +49,7 @@ class StreamService
     {
         $collection = collect($profiles);
         $filtered = $collection->filter(function ($item) {
-            return $item['isLive'] === 1;
+            return $item['isLive'];
         });
 
         return $filtered;
