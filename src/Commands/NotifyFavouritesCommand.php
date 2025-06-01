@@ -2,6 +2,7 @@
 
 namespace NickKlein\Streams\Commands;
 
+use App\Models\User;
 use App\Services\LogsService;
 use App\Services\PushoverService;
 use Illuminate\Console\Command;
@@ -41,13 +42,14 @@ class NotifyFavouritesCommand extends Command
     public function handle()
     {
         // TODO: Clean up necessary? 
+        $user = User::find(1);
         $userId = 1; // Base user
         // Get all favourite handles
-        $handles = $this->streamService->getAllHandleIds($userId, 1);
+        $handles = $this->streamService->getAllHandleIds($user->id, 1);
 
         // Get the profiles + live content from the api for each handle
         $profiles = array_map(
-            fn($handle) => $this->streamService->getProfile($userId, $handle['id']),
+            fn($handle) => $this->streamService->getProfile($user->id, $handle['id']),
             $handles
         );
 
@@ -57,7 +59,7 @@ class NotifyFavouritesCommand extends Command
         $usersToNotify = [];
         // Loop through profiles, check if we already sent a notification for them today, if not send one.
         foreach ($profiles as $profile) {
-            if (!$this->log->doesLogExistToday(['description' => "%{$profile['name']}%"])) {
+            if (!$this->log->doesLogExistLast24Hours(['description' => "%{$profile['name']}%"], $user->timezone)) {
                 $usersToNotify[] = $profile['name'];
                 $this->log->handle("notify.mobile.stream", $profile['name']);
             }
