@@ -56,6 +56,9 @@ function AddStreamerForm(props) {
                         }, {
                             value: "youtube",
                             label: "Youtube"
+                        }, {
+                            value: "kick",
+                            label: "Kick"
                         }]}
                         onChange={(event) => setData('platform', event.target.value)}
                     />

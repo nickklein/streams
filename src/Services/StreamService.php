@@ -8,6 +8,7 @@ use NickKlein\Streams\Models\Streamer;
 use NickKlein\Streams\Models\StreamHandle;
 use NickKlein\Streams\Models\UserStreamHandle;
 use NickKlein\Streams\Repositories\StreamRepository;
+use NickKlein\Streams\Services\Stream\Kick;
 use NickKlein\Streams\Services\Stream\Twitch;
 use NickKlein\Streams\Services\Stream\YouTube;
 
@@ -15,9 +16,9 @@ class StreamService
 {
     private $streams;
 
-    public function __construct(Twitch $twitch, YouTube $youTube, public StreamRepository $streamRepository)
+    public function __construct(Kick $kick, Twitch $twitch, YouTube $youTube, public StreamRepository $streamRepository)
     {
-        $this->streams = [$twitch, $youTube];
+        $this->streams = [$kick, $twitch, $youTube];
     }
 
     public function getAllHandleIds(int $userId, int $favourites = 0): array
