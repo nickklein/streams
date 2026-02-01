@@ -25,27 +25,12 @@ class StreamService
     {
         $userStreamHandles = $this->streamRepository->getUsersStreamers($userId, $favourites);
         $response = [];
-        $seenStreamers = [];
 
-        foreach ($userStreamHandles as $ush) {
-            // Skip if we've already seen this streamer
-            if (isset($seenStreamers[$ush->streamer_id])) {
-                continue;
-            }
-            $seenStreamers[$ush->streamer_id] = true;
-
-            $platforms = $ush->streamer->streamHandles->map(function ($handle) {
-                return [
-                    'name' => $handle->platform,
-                    'url' => $handle->channel_url,
-                ];
-            })->values()->toArray();
-
+        foreach ($userStreamHandles as $item) {
             $response[] = [
-                'id' => $ush->id,
-                'name' => $ush->streamer->name,
-                'is_live' => $ush->is_live,
-                'platforms' => $platforms,
+                'id' => $item->id,
+                'name' => $item->streamer->name,
+                'is_live' => $item->is_live,
             ];
         }
 

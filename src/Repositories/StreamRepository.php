@@ -33,11 +33,16 @@ class StreamRepository
 
     public function getUsersStreamers(int $userId, int $favourites = 0): Collection
     {
-        return UserStreamHandle::where('user_id', $userId)
+        $base = UserStreamHandle::query()
+            ->where('user_id', $userId)
+            ->when($favourites, fn ($q) => $q->where('favourite', $favourites));
+
+        return UserStreamHandle::query()
+            ->whereIn('id', (clone $base)
+                ->selectRaw('MIN(id) as id')
+                ->groupBy('streamer_id')
+            )
             ->with(['streamer.streamHandles'])
-            ->when($favourites, function($query) use ($favourites) {
-                return $query->where('favourite', $favourites);
-            })
             ->get();
     }
 
