@@ -34,6 +34,11 @@ class StreamHandleSeeder
             'channel_id' => 'UCMiTiaj5wsJoVjrd-V_IFVQ',
             'channel_url' => 'https://www.youtube.com/@HAchubby/live',
             'platform' => 'youtube',
+        ], [
+            'streamer_id' => 5,
+            'channel_id' => 'xqc',
+            'channel_url' => 'https://kick.com/xqc',
+            'platform' => 'kick',
         ]]);
         StreamHandle::reguard();
     }

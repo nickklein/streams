@@ -91,7 +91,7 @@ class YouTube implements StreamServiceInterface
         ];
     }
 
-    private function isChannelLive($channelId): bool
+    public function isChannelLive(string $channelId): bool
     {
         $client = new Client([
             'timeout' => 30,

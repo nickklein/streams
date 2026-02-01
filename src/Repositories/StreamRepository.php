@@ -23,11 +23,21 @@ class StreamRepository
     }
 
 
-    public function getUsersStreamHandle(int $userId, string $userStreamId): Collection
+    public function getUsersStreamHandle(int $userId, int $userStreamId): Collection
     {
         return UserStreamHandle::where('user_id', $userId)
             ->where('id', $userStreamId)
             ->with(['streamer.streamHandles'])
+            ->get();
+    }
+
+    public function getUsersStreamers(int $userId, int $favourites = 0): Collection
+    {
+        return UserStreamHandle::where('user_id', $userId)
+            ->with(['streamer.streamHandles'])
+            ->when($favourites, function($query) use ($favourites) {
+                return $query->where('favourite', $favourites);
+            })
             ->get();
     }
 
