@@ -44,16 +44,21 @@ function AddStreamerForm(props) {
 
                 <div>
                     <InputLabel for="platform" value="Platform" />
-                    <SelectOptions 
+                    <SelectOptions
                         options={[
                         {
                             value: 0,
                             label: "Select an option",
                         },
                         {
+                            value: "kick",
+                            label: "Kick",
+                        },
+                        {
                             value: "twitch",
                             label: "Twitch",
-                        }, {
+                        },
+                        {
                             value: "youtube",
                             label: "Youtube"
                         }]}

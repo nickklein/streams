@@ -8,6 +8,7 @@ use NickKlein\Streams\Models\Streamer;
 use NickKlein\Streams\Models\StreamHandle;
 use NickKlein\Streams\Models\UserStreamHandle;
 use NickKlein\Streams\Repositories\StreamRepository;
+use NickKlein\Streams\Services\Stream\Kick;
 use NickKlein\Streams\Services\Stream\Twitch;
 use NickKlein\Streams\Services\Stream\YouTube;
 
@@ -15,31 +16,95 @@ class StreamService
 {
     private $streams;
 
-    public function __construct(Twitch $twitch, YouTube $youTube, public StreamRepository $streamRepository)
+    public function __construct(Kick $kick, Twitch $twitch, YouTube $youTube, public StreamRepository $streamRepository)
     {
-        $this->streams = [$twitch, $youTube];
+        $this->streams = [$kick, $twitch, $youTube];
     }
 
     public function getAllHandleIds(int $userId, int $favourites = 0): array
     {
-        $collection = collect([]);
-        foreach ($this->streams as $stream) {
-            $collection = $collection->merge(collect($stream->getLimitedProfile($userId, $favourites)));
-        }
-        $sortedCollection = $this->sortCollectionByLiveAndName($collection);
+        $userStreamHandles = $this->streamRepository->getUsersStreamers($userId, $favourites);
+        $response = [];
+        $seenStreamers = [];
 
-        return $sortedCollection->toArray();
+        foreach ($userStreamHandles as $ush) {
+            // Skip if we've already seen this streamer
+            if (isset($seenStreamers[$ush->streamer_id])) {
+                continue;
+            }
+            $seenStreamers[$ush->streamer_id] = true;
+
+            $platforms = $ush->streamer->streamHandles->map(function ($handle) {
+                return [
+                    'name' => $handle->platform,
+                    'url' => $handle->channel_url,
+                ];
+            })->values()->toArray();
+
+            $response[] = [
+                'id' => $ush->id,
+                'name' => $ush->streamer->name,
+                'is_live' => $ush->is_live,
+                'platforms' => $platforms,
+            ];
+        }
+
+        return $this->sortCollectionByLiveAndName(collect($response))->toArray();
     }
 
     public function getProfile(int $userId, int $userStreamId)
     {
-        foreach ($this->streams as $stream) {
-            if ($profile = $stream->getProfileById($userId, $userStreamId)) {
-                return $profile;
-            }
+        $ush = $this->streamRepository->getUsersStreamHandle($userId, $userStreamId)->first();
+        if (!$ush) {
+            return [];
         }
 
-        return [];
+        $cacheMinutes = 15;
+        $isCacheExpired = $this->streamRepository->isLastSyncExpired($userId, $userStreamId, $cacheMinutes);
+
+        $isLive = $ush->is_live;
+        $url = $ush->streamer->streamHandles->first()?->channel_url;
+
+        if ($isCacheExpired) {
+            $isLive = false;
+            foreach ($ush->streamer->streamHandles as $handle) {
+                $service = $this->getServiceByPlatform($handle->platform);
+                if ($service && $service->isChannelLive($handle->channel_id)) {
+                    $isLive = true;
+                    $url = $handle->channel_url;
+                    break;
+                }
+            }
+
+            $ush->is_live = $isLive;
+            $ush->last_synced_at = now();
+            $ush->save();
+        }
+
+        $platforms = $ush->streamer->streamHandles->map(function ($handle) {
+            return [
+                'name' => $handle->platform,
+                'url' => $handle->channel_url,
+            ];
+        })->values()->toArray();
+
+        return [
+            'id' => $ush->id,
+            'name' => $ush->streamer->name,
+            'url' => $url,
+            'isLive' => $isLive,
+            'platforms' => $platforms,
+        ];
+    }
+
+    private function getServiceByPlatform(string $platform)
+    {
+        foreach ($this->streams as $service) {
+            if ($service::NAME === $platform) {
+                return $service;
+            }
+        }
+        return null;
     }
 
     /**
