@@ -22,6 +22,8 @@ class StreamerSeeder
             'name' => 'starsmitten'
         ], [
             'name' => 'HAchubby',
+        ], [
+            'name' => 'xqc',
         ]]);
         Streamer::reguard();
     }
