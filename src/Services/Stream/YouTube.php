@@ -17,10 +17,10 @@ class YouTube implements StreamServiceInterface
         //
     }
 
-    public function getLimitedProfile(int $userId, int $favourites = 0): array
+    public function getUsersGroupedStreamerHandles(int $userId, int $favourites = 0): array
     {
         $response = [];
-        $streamHandles = $this->streamRepository->getUsersStreamHandles($userId, self::NAME, $favourites);
+        $streamHandles = $this->streamRepository->getUsersGroupedStreamerHandles($userId, self::NAME, $favourites);
 
         foreach ($streamHandles as $stream) {
             $response[] = [
@@ -36,15 +36,7 @@ class YouTube implements StreamServiceInterface
 
     public function getProfileById(int $userId, int $userStreamId): array
     {
-        $streamHandles = $this->streamRepository->getUsersStreamHandles($userId, self::NAME);
-
-        $targetStream = null;
-        foreach ($streamHandles as $stream) {
-            if ($stream->id === $userStreamId) {
-                $targetStream = $stream;
-                break;
-            }
-        }
+        $targetStream = $this->streamRepository->getUsersStreamHandles($userId, $userStreamId);
 
         // Return empty if no matching stream found
         if (!$targetStream) {
@@ -83,11 +75,19 @@ class YouTube implements StreamServiceInterface
             $targetStream->save();
         }
 
+        $platforms = $targetStream->streamer->streamHandles->map(function ($handle) {
+            return [
+                'name' => $handle->platform,
+                'url' => $handle->channel_url,
+            ];
+        })->values()->toArray();
+
         return [
             'id' => $targetStream->id,
             'name' => $targetStream->streamer->name,
             'url' => $handle->channel_url,
             'isLive' => $isLive,
+            'platforms' => $platforms,
         ];
     }
 
