@@ -3,20 +3,21 @@
 namespace NickKlein\Streams\Services\Stream;
 
 use App\Models\AccessToken;
-use NickKlein\Streams\Interfaces\StreamServiceInterface;
 use Carbon\Carbon;
+use Exception;
+use NickKlein\Streams\Interfaces\StreamServiceInterface;
+use GuzzleHttp\Client;
 use NickKlein\Streams\Repositories\StreamRepository;
 
-class Twitch implements StreamServiceInterface
+class Kick implements StreamServiceInterface
 {
-    const NAME = 'twitch';
     const CACHE_MINUTES = 15;
+    const NAME = 'kick';
 
     public function __construct(public StreamRepository $streamRepository)
     {
         //
     }
-    
 
     public function getUsersGroupedStreamerHandles(int $userId, int $favourites = 0): array
     {
@@ -36,30 +37,22 @@ class Twitch implements StreamServiceInterface
 
     public function getProfileById(int $userId, int $userStreamId): array
     {
-        // Get all stream handles for the user
         $targetStream = $this->streamRepository->getUsersStreamHandles($userId, $userStreamId);
-        
-        // Return empty if no matching stream found
+
         if (!$targetStream) {
             return [];
         }
-        
-        // Get the first handle from the streamer
+
         $handle = $targetStream->streamer->streamHandles->first();
         if (!$handle) {
             return [];
         }
-        
-        // Determine if we need fresh live status
+
         $isCacheExpired = $this->streamRepository->isLastSyncExpired($userId, $userStreamId, self::CACHE_MINUTES);
-        
+
         $isLive = $targetStream->is_live;
         if ($isCacheExpired) {
-            // get the access token and the live status
-            $token = $this->getAccessToken();
-            $isLive = $this->isAccountLive($handle->channel_id, $token);
-
-            // Update user stream handle row
+            $isLive = $this->isChannelLive($handle->channel_id);
             $targetStream->is_live = $isLive;
             $targetStream->last_synced_at = now();
             $targetStream->save();
@@ -71,8 +64,7 @@ class Twitch implements StreamServiceInterface
                 'url' => $handle->channel_url,
             ];
         })->values()->toArray();
-        
-        // Return the profile data
+
         return [
             'id' => $targetStream->id,
             'name' => $targetStream->streamer->name,
@@ -82,7 +74,7 @@ class Twitch implements StreamServiceInterface
         ];
     }
 
-    private function getAccessToken()
+    private function getAccessToken(): array
     {
         if ($this->isAccessTokenValid()) {
             $token = AccessToken::where('name', self::NAME)->first();
@@ -102,18 +94,18 @@ class Twitch implements StreamServiceInterface
             ->exists();
     }
 
-    public function generateAccessToken()
+    private function generateAccessToken(): array
     {
-        $client = new \GuzzleHttp\Client();
+        $client = new Client();
 
-        $response = $client->post('https://id.twitch.tv/oauth2/token', [
+        $response = $client->post('https://id.kick.com/oauth/token', [
             'headers' => [
                 'Content-Type' => 'application/x-www-form-urlencoded'
             ],
             'form_params' => [
-                'client_id' => config('services.twitch.client_id'), // Replace with your client ID
-                'client_secret' => config('services.twitch.client_secret'), // Replace with your client secret
-                'grant_type' => 'client_credentials'
+                'grant_type' => 'client_credentials',
+                'client_id' => config('services.kick.client_id'),
+                'client_secret' => config('services.kick.client_secret'),
             ]
         ]);
 
@@ -128,30 +120,57 @@ class Twitch implements StreamServiceInterface
             ]
         );
 
-
         return [
             'access_token' => $json['access_token'],
             'expires_at' => Carbon::now()->addSeconds($json['expires_in']),
         ];
     }
 
-    private function isAccountLive(string $channel, array $token): bool
+    public function isChannelLive(string $channelSlug): bool
     {
-
-        $client = new \GuzzleHttp\Client();
-
-        $response = $client->get("https://api.twitch.tv/helix/streams", [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $token['access_token'],
-                'Client-ID' => config('services.twitch.client_id')
-            ],
-            'query' => [
-                'user_login' => $channel
-            ]
+        $client = new Client([
+            'timeout' => 30,
+            'http_errors' => false,
         ]);
 
-        $body = json_decode($response->getBody(), true);
+        try {
+            $token = $this->getAccessToken();
 
-        return !empty($body['data']);
+            \Log::info('Kick API: Checking live status', ['slug' => $channelSlug, 'token' => substr($token['access_token'], 0, 10) . '...']);
+
+            $response = $client->get('https://api.kick.com/public/v1/channels', [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $token['access_token'],
+                    'Accept' => 'application/json',
+                ],
+                'query' => [
+                    'slug' => $channelSlug,
+                ]
+            ]);
+
+            \Log::info('Kick API: Response status', ['status' => $response->getStatusCode()]);
+
+            if ($response->getStatusCode() !== 200) {
+                \Log::error('Kick API: Non-200 response', ['status' => $response->getStatusCode(), 'body' => $response->getBody()->getContents()]);
+                return false;
+            }
+
+            $data = json_decode($response->getBody()->getContents(), true);
+
+            \Log::info('Kick API: Response data', ['data' => $data]);
+
+            // Check if we have data and the stream is live
+            if (!empty($data['data'][0]['stream'])) {
+                $isLive = $data['data'][0]['stream']['is_live'] === true;
+                \Log::info('Kick API: is_live result', ['is_live' => $isLive]);
+                return $isLive;
+            }
+
+            \Log::info('Kick API: No stream data found');
+            return false;
+        } catch (Exception $e) {
+            \Log::error('Kick API: Exception', ['error' => $e->getMessage()]);
+            return false;
+        }
     }
 }

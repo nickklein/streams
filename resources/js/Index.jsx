@@ -60,13 +60,25 @@ export default function Index(props) {
                             {item.name ? (
                                 <>
                                     <h3 className={"text-xl font-semibold"}>
-                                        <a href={item.url} target="_blank">
-                                            {item.name}
-                                        </a>
+                                        {item.name}
                                     </h3>
                                     <p className={`mt-2 ${item.isLive ? 'text-red-500' : 'text-gray-500'}`}>
                                         {item.isLive ? 'Live' : 'Offline'}
                                     </p>
+                                    {item.platforms && item.platforms.length > 0 && (
+                                        <div className="flex gap-2 mt-2">
+                                            {item.platforms.map((platform, idx) => (
+                                                <a
+                                                    key={idx}
+                                                    href={platform.url}
+                                                    target="_blank"
+                                                    className="text-sm text-blue-400 hover:text-blue-300 capitalize"
+                                                >
+                                                    {platform.name}
+                                                </a>
+                                            ))}
+                                        </div>
+                                    )}
                                 </>
                             ) : ( 
                                 <>

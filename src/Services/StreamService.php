@@ -8,6 +8,7 @@ use NickKlein\Streams\Models\Streamer;
 use NickKlein\Streams\Models\StreamHandle;
 use NickKlein\Streams\Models\UserStreamHandle;
 use NickKlein\Streams\Repositories\StreamRepository;
+use NickKlein\Streams\Services\Stream\Kick;
 use NickKlein\Streams\Services\Stream\Twitch;
 use NickKlein\Streams\Services\Stream\YouTube;
 
@@ -15,17 +16,18 @@ class StreamService
 {
     private $streams;
 
-    public function __construct(Twitch $twitch, YouTube $youTube, public StreamRepository $streamRepository)
+    public function __construct(Kick $kick, Twitch $twitch, YouTube $youTube, public StreamRepository $streamRepository)
     {
-        $this->streams = [$twitch, $youTube];
+        $this->streams = [$kick, $twitch, $youTube];
     }
 
+    /**
+     * Gets the handles for the front end to quickly display
+     * Another method "fetches" actual live statuses
+     **/
     public function getAllHandleIds(int $userId, int $favourites = 0): array
     {
-        $collection = collect([]);
-        foreach ($this->streams as $stream) {
-            $collection = $collection->merge(collect($stream->getLimitedProfile($userId, $favourites)));
-        }
+        $collection = $this->streamRepository->getUsersGroupedStreamerHandles($userId, $favourites);
         $sortedCollection = $this->sortCollectionByLiveAndName($collection);
 
         return $sortedCollection->toArray();

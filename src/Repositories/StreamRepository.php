@@ -7,19 +7,29 @@ use NickKlein\Streams\Models\UserStreamHandle;
 
 class StreamRepository
 {
-    public function getUsersStreamHandles(int $userId, string $platform, int $favourites = 0): Collection
+    public function getUsersGroupedStreamerHandles(int $userId, int $favourites = 0): Collection
+    {
+        $base = UserStreamHandle::query()
+            ->where('user_id', $userId)
+            ->when($favourites, fn ($q) => $q->where('favourite', $favourites));
+
+        return UserStreamHandle::query()
+            ->whereIn('id', (clone $base)
+                ->selectRaw('MIN(id) as id')
+                ->groupBy('streamer_id')
+            )
+            ->with(['streamer.streamHandles'])
+            ->get();
+    }
+
+    public function getUsersStreamHandles(int $userId, int $userStreamId, int $favourites = 0)
     {
         return UserStreamHandle::where('user_id', $userId)
-            ->with(['streamer.streamHandles' => function ($query) use ($platform) {
-                $query->where('platform', $platform);
-            }])
-            ->whereHas('streamer.streamHandles', function ($query) use ($platform) {
-                $query->where('platform', $platform);
-            })
+            ->where('id', $userStreamId)
             ->when($favourites, function($query) use ($favourites) {
                     return $query->where('favourite', $favourites);
             })
-            ->get();
+            ->first();
     }
 
 
