@@ -36,16 +36,15 @@ class Twitch implements StreamServiceInterface
 
     public function getProfileById(int $userId, int $userStreamId): array
     {
-        // Get all stream handles for the user
-        $targetStream = $this->streamRepository->getUsersStreamHandles($userId, $userStreamId);
-        
-        // Return empty if no matching stream found
+        $targetStream = $this->streamRepository->getUsersStreamHandles($userId, $userStreamId, self::NAME);
+
         if (!$targetStream) {
             return [];
         }
-        
-        // Get the first handle from the streamer
-        $handle = $targetStream->streamer->streamHandles->first();
+
+        $handle = $targetStream->streamer->streamHandles
+            ->where('platform', self::NAME)
+            ->first();
         if (!$handle) {
             return [];
         }
