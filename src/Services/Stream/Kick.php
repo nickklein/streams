@@ -37,13 +37,15 @@ class Kick implements StreamServiceInterface
 
     public function getProfileById(int $userId, int $userStreamId): array
     {
-        $targetStream = $this->streamRepository->getUsersStreamHandles($userId, $userStreamId);
+        $targetStream = $this->streamRepository->getUsersStreamHandles($userId, $userStreamId, self::NAME);
 
         if (!$targetStream) {
             return [];
         }
 
-        $handle = $targetStream->streamer->streamHandles->first();
+        $handle = $targetStream->streamer->streamHandles
+            ->where('platform', self::NAME)
+            ->first();
         if (!$handle) {
             return [];
         }

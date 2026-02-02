@@ -22,12 +22,16 @@ class StreamRepository
             ->get();
     }
 
-    public function getUsersStreamHandles(int $userId, int $userStreamId, int $favourites = 0)
+    public function getUsersStreamHandles(int $userId, int $userStreamId, string $platform, int $favourites = 0)
     {
         return UserStreamHandle::where('user_id', $userId)
             ->where('id', $userStreamId)
+            ->with(['streamer.streamHandles'])
+            ->whereHas('streamer.streamHandles', function ($query) use ($platform) {
+                $query->where('platform', $platform);
+            })
             ->when($favourites, function($query) use ($favourites) {
-                    return $query->where('favourite', $favourites);
+                return $query->where('favourite', $favourites);
             })
             ->first();
     }
